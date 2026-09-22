@@ -1,0 +1,6 @@
+name = "sub2api-admin-frontend"
+compatibility_date = "2026-01-17"
+pages_build_output_dir = "dist"
+
+[vars]
+API_UPSTREAM = "https://codex.mintcat.work"

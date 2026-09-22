@@ -530,16 +530,16 @@ cd sub2api
 # 2. 安装 pnpm（如果还没有安装）
 npm install -g pnpm
 
-# 3. 编译前端
+# 3. 编译独立前端
 cd frontend
 pnpm install
 pnpm run build
-# 构建产物输出到 ../backend/internal/web/dist/
+# 构建产物输出到 frontend/dist/，可直接部署到 Cloudflare Pages。
 
-# 4. 编译后端（嵌入前端）
+# 4. 编译纯后端程序
 cd ../backend
 VERSION="$(./scripts/resolve-version.sh)"
-go build -tags embed -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
+go build -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
 
 # 5. 创建配置文件
 cp ../deploy/config.example.yaml ./config.yaml
@@ -548,7 +548,7 @@ cp ../deploy/config.example.yaml ./config.yaml
 nano config.yaml
 ```
 
-> **注意：** `-tags embed` 参数会将前端嵌入到二进制文件中。不使用此参数编译的程序将不包含前端界面。
+> **注意：** 前端独立部署，后端二进制仅提供 API 路由。
 
 **`config.yaml` 关键配置：**
 

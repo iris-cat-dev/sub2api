@@ -3,11 +3,14 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --config vite.config.ts",
     "check:i18n": "vitest run src/i18n/__tests__/localeKeyCompleteness.spec.ts",
-    "build": "pnpm run check:i18n && vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "build": "pnpm run check:i18n && vue-tsc -b && vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "pages:dev": "pnpm run build && wrangler pages dev dist --port 3000 --ip 127.0.0.1",
+    "deploy:pages": "pnpm run build && wrangler pages deploy dist",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
     "typecheck": "vue-tsc --noEmit",
@@ -58,14 +61,7 @@
     "vite": "^5.0.10",
     "vite-plugin-checker": "^0.9.1",
     "vitest": "^2.1.9",
-    "vue-tsc": "^2.2.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "js-cookie": "3.0.7",
-      "form-data@<4.0.6": ">=4.0.6",
-      "postcss@<8.5.18": ">=8.5.18",
-      "dompurify@<3.4.14": ">=3.4.14"
-    }
+    "vue-tsc": "^2.2.0",
+    "wrangler": "^4.54.0"
   }
 }

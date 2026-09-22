@@ -492,16 +492,16 @@ cd sub2api
 # 2. Install pnpm (if not already installed)
 npm install -g pnpm
 
-# 3. Build frontend
+# 3. Build the standalone frontend
 cd frontend
 pnpm install
 pnpm run build
-# Output will be in ../backend/internal/web/dist/
+# Output will be in frontend/dist/ and can be deployed to Cloudflare Pages.
 
-# 4. Build backend with embedded frontend
+# 4. Build the backend-only binary
 cd ../backend
 VERSION="$(./scripts/resolve-version.sh)"
-go build -tags embed -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
+go build -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
 
 # 5. Create configuration file
 cp ../deploy/config.example.yaml ./config.yaml
@@ -510,7 +510,7 @@ cp ../deploy/config.example.yaml ./config.yaml
 nano config.yaml
 ```
 
-> **Note:** The `-tags embed` flag embeds the frontend into the binary. Without this flag, the binary will not serve the frontend UI.
+> **Note:** The frontend is deployed independently. The backend binary serves API routes only.
 
 **Key configuration in `config.yaml`:**
 

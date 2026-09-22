@@ -493,16 +493,16 @@ cd sub2api
 # 2. pnpm をインストール（未インストールの場合）
 npm install -g pnpm
 
-# 3. フロントエンドをビルド
+# 3. 独立フロントエンドをビルド
 cd frontend
 pnpm install
 pnpm run build
-# 出力先: ../backend/internal/web/dist/
+# 出力先は frontend/dist/。Cloudflare Pages に直接デプロイできます。
 
-# 4. フロントエンドを組み込んだバックエンドをビルド
+# 4. バックエンド専用バイナリをビルド
 cd ../backend
 VERSION="$(./scripts/resolve-version.sh)"
-go build -tags embed -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
+go build -ldflags="-X main.Version=${VERSION}" -o sub2api ./cmd/server
 
 # 5. 設定ファイルを作成
 cp ../deploy/config.example.yaml ./config.yaml
@@ -511,7 +511,7 @@ cp ../deploy/config.example.yaml ./config.yaml
 nano config.yaml
 ```
 
-> **注意:** `-tags embed` フラグはフロントエンドをバイナリに組み込みます。このフラグがない場合、バイナリはフロントエンド UI を提供しません。
+> **注意:** フロントエンドは独立してデプロイされ、バックエンドバイナリは API ルートのみを提供します。
 
 **`config.yaml` の主要設定:**
 
