@@ -124,6 +124,7 @@ describe('UserPlatformQuotaModal', () => {
     expect(inputs.length).toBe(15)
     // 第一个 input 是 anthropic.daily = 10
     expect((inputs[0].element as HTMLInputElement).value).toBe('10')
+    expect(w.text()).toContain('¥3.20')
   })
 
   it('保存提交完整 5 platform payload', async () => {

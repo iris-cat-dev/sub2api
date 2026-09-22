@@ -136,31 +136,41 @@ var (
 // LiteLLMModelPricing LiteLLM价格数据结构
 // 只保留我们需要的字段，使用指针来处理可能缺失的值
 type LiteLLMModelPricing struct {
-	InputCostPerToken                   float64 `json:"input_cost_per_token"`
-	InputCostPerTokenPriority           float64 `json:"input_cost_per_token_priority"`
-	OutputCostPerToken                  float64 `json:"output_cost_per_token"`
-	OutputCostPerTokenPriority          float64 `json:"output_cost_per_token_priority"`
-	CacheCreationInputTokenCost         float64 `json:"cache_creation_input_token_cost"`
-	CacheCreationInputTokenCostPriority float64 `json:"cache_creation_input_token_cost_priority"`
-	CacheCreationInputTokenCostAbove1hr float64 `json:"cache_creation_input_token_cost_above_1hr"`
-	CacheReadInputTokenCost             float64 `json:"cache_read_input_token_cost"`
-	CacheReadInputTokenCostPriority     float64 `json:"cache_read_input_token_cost_priority"`
-	LongContextInputTokenThreshold      int     `json:"long_context_input_token_threshold,omitempty"`
-	LongContextInputCostMultiplier      float64 `json:"long_context_input_cost_multiplier,omitempty"`
-	LongContextOutputCostMultiplier     float64 `json:"long_context_output_cost_multiplier,omitempty"`
-	SupportsServiceTier                 bool    `json:"supports_service_tier"`
-	LiteLLMProvider                     string  `json:"litellm_provider"`
-	Mode                                string  `json:"mode"`
-	SupportsPromptCaching               bool    `json:"supports_prompt_caching"`
-	OutputCostPerImage                  float64 `json:"output_cost_per_image"`       // 图片生成模型每张图片价格
-	OutputCostPerImageToken             float64 `json:"output_cost_per_image_token"` // 图片输出 token 价格
-	InputCostPerImageToken              float64 `json:"input_cost_per_image_token"`  // 图片输入 token 价格（如 gpt-image-2 图片编辑）
-	CacheReadInputImageTokenCost        float64 `json:"cache_read_input_image_token_cost"`
+	InputCostPerToken                   float64  `json:"input_cost_per_token"`
+	InputCostPerTokenPriority           float64  `json:"input_cost_per_token_priority"`
+	OutputCostPerToken                  float64  `json:"output_cost_per_token"`
+	OutputCostPerTokenPriority          float64  `json:"output_cost_per_token_priority"`
+	CacheCreationInputTokenCost         float64  `json:"cache_creation_input_token_cost"`
+	CacheCreationInputTokenCostPriority float64  `json:"cache_creation_input_token_cost_priority"`
+	CacheCreationInputTokenCostAbove1hr float64  `json:"cache_creation_input_token_cost_above_1hr"`
+	CacheReadInputTokenCost             float64  `json:"cache_read_input_token_cost"`
+	CacheReadInputTokenCostPriority     float64  `json:"cache_read_input_token_cost_priority"`
+	LongContextInputTokenThreshold      int      `json:"long_context_input_token_threshold,omitempty"`
+	LongContextInputCostMultiplier      float64  `json:"long_context_input_cost_multiplier,omitempty"`
+	LongContextOutputCostMultiplier     float64  `json:"long_context_output_cost_multiplier,omitempty"`
+	SupportsServiceTier                 bool     `json:"supports_service_tier"`
+	LiteLLMProvider                     string   `json:"litellm_provider"`
+	Mode                                string   `json:"mode"`
+	SupportsPromptCaching               bool     `json:"supports_prompt_caching"`
+	OutputCostPerImage                  float64  `json:"output_cost_per_image"`       // 图片生成模型每张图片价格
+	OutputCostPerImageToken             float64  `json:"output_cost_per_image_token"` // 图片输出 token 价格
+	InputCostPerImageToken              float64  `json:"input_cost_per_image_token"`  // 图片输入 token 价格（如 gpt-image-2 图片编辑）
+	CacheReadInputImageTokenCost        float64  `json:"cache_read_input_image_token_cost"`
+	MaxInputTokens                      int64    `json:"max_input_tokens,omitempty"`
+	MaxOutputTokens                     int64    `json:"max_output_tokens,omitempty"`
+	SupportsReasoning                   *bool    `json:"supports_reasoning,omitempty"`
+	DefaultReasoningLevel               string   `json:"default_reasoning_level,omitempty"`
+	SupportedReasoningLevels            []string `json:"supported_reasoning_levels,omitempty"`
+	SupportedModalities                 []string `json:"supported_modalities,omitempty"`
 
 	// TokenPricingAbsent 表示源数据中 input/output token 价格均缺失（仅有图片价）。
 	// 此类条目只可用于图片计费，token 计费必须回退到 fallback 或 fail-closed，
 	// 否则 token 流量会被按 $0 计费。零值（false）表示条目具备 token 价格。
 	TokenPricingAbsent bool `json:"-"`
+	// OverrideApplied 表示该条目已由 pricing.override_file 显式覆盖。
+	OverrideApplied bool `json:"-"`
+	// CapabilityOverrideApplied 表示 pricing.override_file 为该条目显式声明了能力字段。
+	CapabilityOverrideApplied bool `json:"-"`
 }
 
 // PricingRemoteClient 远程价格数据获取接口
@@ -191,6 +201,14 @@ type LiteLLMRawEntry struct {
 	OutputCostPerImageToken             *float64 `json:"output_cost_per_image_token"`
 	InputCostPerImageToken              *float64 `json:"input_cost_per_image_token"`
 	CacheReadInputImageTokenCost        *float64 `json:"cache_read_input_image_token_cost"`
+	MaxInputTokens                      *int64   `json:"max_input_tokens"`
+	MaxOutputTokens                     *int64   `json:"max_output_tokens"`
+	SupportsReasoning                   *bool    `json:"supports_reasoning"`
+	DefaultReasoningLevel               string   `json:"default_reasoning_level"`
+	SupportedReasoningLevels            []string `json:"supported_reasoning_levels"`
+	SupportedModalities                 []string `json:"supported_modalities"`
+	OverrideApplied                     bool     `json:"_sub2api_override_applied"`
+	CapabilityOverrideApplied           bool     `json:"_sub2api_capability_override_applied"`
 }
 
 // PricingService 动态价格服务
@@ -607,11 +625,23 @@ func (s *PricingService) parsePricingData(body []byte) (map[string]*LiteLLMModel
 		}
 
 		pricing := &LiteLLMModelPricing{
-			LiteLLMProvider:       entry.LiteLLMProvider,
-			Mode:                  entry.Mode,
-			SupportsPromptCaching: entry.SupportsPromptCaching,
-			SupportsServiceTier:   entry.SupportsServiceTier,
-			TokenPricingAbsent:    entry.InputCostPerToken == nil && entry.OutputCostPerToken == nil,
+			LiteLLMProvider:           entry.LiteLLMProvider,
+			Mode:                      entry.Mode,
+			SupportsPromptCaching:     entry.SupportsPromptCaching,
+			SupportsServiceTier:       entry.SupportsServiceTier,
+			SupportsReasoning:         entry.SupportsReasoning,
+			DefaultReasoningLevel:     normalizeReasoningLevel(entry.DefaultReasoningLevel),
+			SupportedReasoningLevels:  normalizeReasoningLevels(entry.SupportedReasoningLevels),
+			SupportedModalities:       normalizeCodexInputModalities(entry.SupportedModalities),
+			TokenPricingAbsent:        entry.InputCostPerToken == nil && entry.OutputCostPerToken == nil,
+			OverrideApplied:           entry.OverrideApplied,
+			CapabilityOverrideApplied: entry.CapabilityOverrideApplied,
+		}
+		if entry.MaxInputTokens != nil && *entry.MaxInputTokens > 0 {
+			pricing.MaxInputTokens = *entry.MaxInputTokens
+		}
+		if entry.MaxOutputTokens != nil && *entry.MaxOutputTokens > 0 {
+			pricing.MaxOutputTokens = *entry.MaxOutputTokens
 		}
 
 		if entry.InputCostPerToken != nil {
@@ -858,9 +888,37 @@ func (s *PricingService) applyPricingOverrides(rawData map[string]json.RawMessag
 			logger.LegacyPrintf("service.pricing", "[Pricing] Warning: override entry %q skipped: not a JSON object", name)
 			continue
 		}
-		rawData[name] = merged
+		markers := json.RawMessage(`{"_sub2api_override_applied":true}`)
+		if pricingOverrideHasCapabilities(patch) {
+			markers = json.RawMessage(`{"_sub2api_override_applied":true,"_sub2api_capability_override_applied":true}`)
+		}
+		marked, valid := mergePricingOverrideEntry(merged, markers)
+		if !valid {
+			continue
+		}
+		rawData[name] = marked
 	}
 	return rawData
+}
+
+func pricingOverrideHasCapabilities(patch json.RawMessage) bool {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(patch, &fields); err != nil {
+		return false
+	}
+	for _, key := range []string{
+		"max_input_tokens",
+		"max_output_tokens",
+		"supports_reasoning",
+		"default_reasoning_level",
+		"supported_reasoning_levels",
+		"supported_modalities",
+	} {
+		if _, ok := fields[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // loadPricingOverrideEntries 读取 override 文件的原始条目。未配置返回 nil；

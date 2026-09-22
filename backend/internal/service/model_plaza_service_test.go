@@ -67,6 +67,136 @@ func TestListPlazaGroups_Fable51HasNoImplicitReasoningMultiplier(t *testing.T) {
 	require.Empty(t, groups[0].Models[0].Pricing.ReasoningEffortMultipliers)
 }
 
+func TestListPlazaGroups_IncludesModelsConfiguredOnlyInGroupPricing(t *testing.T) {
+	inputPrice := 1.25e-6
+	outputPrice := 8e-6
+	groups := []Group{{
+		ID:             10,
+		Name:           "group-priced",
+		Platform:       PlatformOpenAI,
+		RateMultiplier: 1,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:    PlatformOpenAI,
+			Models:      []string{"gpt-group-only"},
+			BillingMode: BillingModeToken,
+			InputPrice:  &inputPrice,
+			OutputPrice: &outputPrice,
+		}},
+	}}
+
+	out, err := newPlazaService(nil, groups, nil).ListGroups(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 1)
+	require.Equal(t, "gpt-group-only", out[0].Models[0].Name)
+	require.Equal(t, PlatformOpenAI, out[0].Models[0].Platform)
+	require.NotNil(t, out[0].Models[0].Pricing)
+	require.InDelta(t, inputPrice, *out[0].Models[0].Pricing.InputPrice, 1e-12)
+	require.InDelta(t, outputPrice, *out[0].Models[0].Pricing.OutputPrice, 1e-12)
+}
+
+func TestListPlazaGroups_GroupPricingOverridesChannelPricing(t *testing.T) {
+	channelPrice := 3e-6
+	groupPrice := 1e-6
+	channel := plazaPricedChannel(1, "channel", []int64{10}, PlatformOpenAI, "gpt-shared")
+	channel.ModelPricing[0].InputPrice = &channelPrice
+	groups := []Group{{
+		ID:             10,
+		Name:           "group-priced",
+		Platform:       PlatformOpenAI,
+		RateMultiplier: 1,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:    PlatformOpenAI,
+			Models:      []string{"gpt-shared"},
+			BillingMode: BillingModeToken,
+			InputPrice:  &groupPrice,
+		}},
+	}}
+
+	out, err := newPlazaService([]Channel{channel}, groups, nil).ListGroups(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 1)
+	require.NotNil(t, out[0].Models[0].Pricing)
+	require.InDelta(t, groupPrice, *out[0].Models[0].Pricing.InputPrice, 1e-12)
+}
+
+func TestListPlazaGroups_CompositeGroupPricingAddsModelWithoutChannel(t *testing.T) {
+	inputPrice := 2e-6
+	groups := []Group{{
+		ID:             10,
+		Name:           "composite",
+		Platform:       PlatformComposite,
+		RateMultiplier: 1,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:    PlatformComposite,
+			Models:      []string{"claude-composite-only"},
+			BillingMode: BillingModeToken,
+			InputPrice:  &inputPrice,
+		}},
+	}}
+
+	out, err := newPlazaService(nil, groups, nil).ListGroups(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 1)
+	require.Equal(t, "claude-composite-only", out[0].Models[0].Name)
+	require.Equal(t, PlatformAnthropic, out[0].Models[0].Platform)
+	require.NotNil(t, out[0].Models[0].Pricing)
+	require.InDelta(t, inputPrice, *out[0].Models[0].Pricing.InputPrice, 1e-12)
+}
+
+func TestListPlazaGroups_CompositeGroupPricingOverridesConcreteChannelWithoutDuplicate(t *testing.T) {
+	channelPrice := 3e-6
+	groupPrice := 1e-6
+	channel := plazaPricedChannel(1, "channel", []int64{10}, PlatformOpenAI, "gpt-shared")
+	channel.ModelPricing[0].InputPrice = &channelPrice
+	groups := []Group{{
+		ID:             10,
+		Name:           "composite",
+		Platform:       PlatformComposite,
+		RateMultiplier: 1,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:    PlatformComposite,
+			Models:      []string{"gpt-shared"},
+			BillingMode: BillingModeToken,
+			InputPrice:  &groupPrice,
+		}},
+	}}
+
+	out, err := newPlazaService([]Channel{channel}, groups, nil).ListGroups(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	require.Len(t, out[0].Models, 1)
+	require.Equal(t, PlatformOpenAI, out[0].Models[0].Platform)
+	require.NotNil(t, out[0].Models[0].Pricing)
+	require.InDelta(t, groupPrice, *out[0].Models[0].Pricing.InputPrice, 1e-12)
+}
+
+func TestListPlazaGroups_DoesNotExposeGroupPricingWildcardAsModel(t *testing.T) {
+	price := 1e-6
+	groups := []Group{{
+		ID:             10,
+		Name:           "wildcard-only",
+		Platform:       PlatformOpenAI,
+		RateMultiplier: 1,
+		ModelPricing: []ChannelModelPricing{{
+			Platform:   PlatformOpenAI,
+			Models:     []string{"gpt-*"},
+			InputPrice: &price,
+		}},
+	}}
+
+	out, err := newPlazaService(nil, groups, nil).ListGroups(context.Background())
+
+	require.NoError(t, err)
+	require.Empty(t, out, "通配符定价不是可调用的具体模型，不应作为模型名展示")
+}
+
 func TestListPlazaGroups_DedupFirstWinsWithPricingUpgrade(t *testing.T) {
 	// 同名模型:先见者胜;仅当已存条目无定价而新条目有定价时升级替换。
 	unpriced := Channel{

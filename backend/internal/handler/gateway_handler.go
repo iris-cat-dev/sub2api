@@ -1189,6 +1189,72 @@ func (h *GatewayHandler) Models(c *gin.Context) {
 	writeModelsListResponse(c, claude.DefaultModels)
 }
 
+// ModelsV2 lists the effective model catalog with capabilities used by coding
+// clients. Unknown capability values are omitted instead of being guessed.
+// GET /v2/models
+func (h *GatewayHandler) ModelsV2(c *gin.Context) {
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok || apiKey == nil || apiKey.Group == nil {
+		h.errorResponse(c, http.StatusUnauthorized, "authentication_error", "API key group is required")
+		return
+	}
+
+	group := apiKey.Group
+	platform := group.Platform
+	if forcedPlatform, exists := middleware2.GetForcePlatformFromContext(c); exists && strings.TrimSpace(forcedPlatform) != "" {
+		platform = strings.TrimSpace(forcedPlatform)
+	}
+	groupID := &group.ID
+	var modelIDs []string
+	if platform == service.PlatformOpenAI &&
+		group.Platform == service.PlatformOpenAI &&
+		group.CodexModelsManifestConfig.Enabled {
+		if h.openAIGatewayService == nil {
+			writeOpenAIModelsError(c, http.StatusInternalServerError, "api_error", "OpenAI model discovery is not configured")
+			return
+		}
+		response, account, err := h.openAIGatewayService.FetchPinnedOpenAIModelsList(
+			c.Request.Context(), group, h.maxAccountSwitches, "",
+		)
+		if err != nil {
+			if errors.Is(err, service.ErrNoPinnedCodexModelsAccounts) {
+				writeOpenAIModelsError(c, http.StatusServiceUnavailable, "upstream_error", "No available OpenAI model discovery accounts")
+				return
+			}
+			writeOpenAIModelsError(c, pkgerrors.Code(err), "upstream_error", pkgerrors.Message(err))
+			return
+		}
+		setOpsSelectedAccount(c, account.ID, account.Platform)
+		var catalog struct {
+			Data []struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal(response.Body, &catalog); err != nil {
+			writeOpenAIModelsError(c, http.StatusBadGateway, "upstream_error", "Invalid model catalogue")
+			return
+		}
+		modelIDs = make([]string, 0, len(catalog.Data))
+		for _, model := range catalog.Data {
+			modelIDs = append(modelIDs, model.ID)
+		}
+	} else if platform == service.PlatformComposite {
+		modelIDs = h.compositeAvailableModels(c.Request.Context(), groupID)
+		if len(modelIDs) == 0 {
+			modelIDs = defaultModelIDsForPlatform(service.PlatformComposite)
+		}
+	} else {
+		availableModels := h.gatewayService.GetAvailableModels(c.Request.Context(), groupID, platform)
+		modelIDs = modelListingSource(platform, availableModels, defaultModelIDsForPlatform(platform))
+	}
+	if group.ModelAllowlistEnabled() {
+		modelIDs = group.ModelAllowlist.FilterForListing(modelIDs)
+	}
+
+	models := h.gatewayService.BuildEnhancedModelsCatalog(c.Request.Context(), group, platform, modelIDs)
+	c.JSON(http.StatusOK, gin.H{"object": "list", "data": models})
+}
+
 // CodexModels returns the effective group model list using the manifest shape
 // expected by Codex custom providers. Official OpenAI groups continue to use
 // OpenAIGatewayHandler.CodexModels so their live upstream metadata is preserved.

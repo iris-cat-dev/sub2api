@@ -605,6 +605,139 @@ func (h *GroupHandler) GetByID(c *gin.Context) {
 	response.Success(c, dto.GroupFromServiceAdmin(group))
 }
 
+type groupModelPricingEntryRequest struct {
+	Pricing *service.ChannelModelPricing `json:"pricing" binding:"required"`
+}
+
+func parseGroupModelPricingEntryParams(c *gin.Context) (int64, int, bool) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		response.BadRequest(c, "Invalid group ID")
+		return 0, 0, false
+	}
+
+	index, err := strconv.Atoi(c.Param("index"))
+	if err != nil || index < 0 {
+		response.BadRequest(c, "Invalid model pricing index")
+		return 0, 0, false
+	}
+	return groupID, index, true
+}
+
+func bindGroupModelPricingEntry(c *gin.Context) (service.ChannelModelPricing, bool) {
+	var req groupModelPricingEntryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "Invalid request: "+err.Error())
+		return service.ChannelModelPricing{}, false
+	}
+
+	pricing := req.Pricing.Clone()
+	models := make([]string, 0, len(pricing.Models))
+	for _, model := range pricing.Models {
+		if model = strings.TrimSpace(model); model != "" {
+			models = append(models, model)
+		}
+	}
+	if len(models) == 0 {
+		response.ErrorFrom(c, infraerrors.BadRequest(
+			"GROUP_MODEL_PRICING_MODELS_REQUIRED",
+			"group model pricing entry requires at least one model",
+		))
+		return service.ChannelModelPricing{}, false
+	}
+	pricing.Models = models
+	return pricing, true
+}
+
+func cloneGroupModelPricing(entries []service.ChannelModelPricing) []service.ChannelModelPricing {
+	cloned := make([]service.ChannelModelPricing, len(entries))
+	for i := range entries {
+		cloned[i] = entries[i].Clone()
+	}
+	return cloned
+}
+
+// SaveModelPricingEntry replaces or appends one group model pricing entry.
+// PUT /api/v1/admin/groups/:id/model-pricing/:index
+func (h *GroupHandler) SaveModelPricingEntry(c *gin.Context) {
+	if h.rejectUnsupportedSimpleModeOperation(c, "advanced") {
+		return
+	}
+	groupID, index, ok := parseGroupModelPricingEntryParams(c)
+	if !ok {
+		return
+	}
+
+	group, err := h.adminService.GetGroup(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	if index > len(group.ModelPricing) {
+		response.ErrorFrom(c, infraerrors.BadRequest(
+			"GROUP_MODEL_PRICING_INDEX_OUT_OF_RANGE",
+			"model pricing index is out of range",
+		))
+		return
+	}
+
+	pricing, ok := bindGroupModelPricingEntry(c)
+	if !ok {
+		return
+	}
+	modelPricing := cloneGroupModelPricing(group.ModelPricing)
+	if index == len(modelPricing) {
+		modelPricing = append(modelPricing, pricing)
+	} else {
+		modelPricing[index] = pricing
+	}
+
+	updated, err := h.adminService.UpdateGroup(c.Request.Context(), groupID, &service.UpdateGroupInput{
+		ModelPricing: &modelPricing,
+	})
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.GroupFromServiceAdmin(updated))
+}
+
+// DeleteModelPricingEntry deletes one group model pricing entry.
+// DELETE /api/v1/admin/groups/:id/model-pricing/:index
+func (h *GroupHandler) DeleteModelPricingEntry(c *gin.Context) {
+	if h.rejectUnsupportedSimpleModeOperation(c, "advanced") {
+		return
+	}
+	groupID, index, ok := parseGroupModelPricingEntryParams(c)
+	if !ok {
+		return
+	}
+
+	group, err := h.adminService.GetGroup(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	if index >= len(group.ModelPricing) {
+		response.ErrorFrom(c, infraerrors.BadRequest(
+			"GROUP_MODEL_PRICING_INDEX_OUT_OF_RANGE",
+			"model pricing index is out of range",
+		))
+		return
+	}
+
+	modelPricing := cloneGroupModelPricing(group.ModelPricing)
+	modelPricing = append(modelPricing[:index], modelPricing[index+1:]...)
+	updated, err := h.adminService.UpdateGroup(c.Request.Context(), groupID, &service.UpdateGroupInput{
+		ModelPricing: &modelPricing,
+	})
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, dto.GroupFromServiceAdmin(updated))
+}
+
 // GetGroupModelAllowlistCandidates handles getting candidate model IDs for the group model allowlist.
 // GET /api/v1/admin/groups/:id/model-allowlist-candidates
 func (h *GroupHandler) GetGroupModelAllowlistCandidates(c *gin.Context) {

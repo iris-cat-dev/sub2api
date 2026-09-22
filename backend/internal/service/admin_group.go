@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -1146,6 +1147,14 @@ func normalizeGroupModelPricing(platform string, pricing []ChannelModelPricing) 
 		}
 		if strings.TrimSpace(out[i].Platform) == "" {
 			out[i].Platform = platform
+		}
+		if multiplier := out[i].OfficialPriceMultiplier; multiplier != nil &&
+			(*multiplier <= 0 || math.IsNaN(*multiplier) || math.IsInf(*multiplier, 0)) {
+			return nil, infraerrors.New(
+				http.StatusBadRequest,
+				"GROUP_MODEL_PRICING_OFFICIAL_MULTIPLIER_INVALID",
+				"group model pricing official price multiplier must be greater than zero",
+			)
 		}
 		for j := range out[i].Models {
 			out[i].Models[j] = strings.TrimSpace(out[i].Models[j])

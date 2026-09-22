@@ -108,6 +108,7 @@ type ChannelModelPricing struct {
 	TimePricing                *ChannelTimePricing `json:"time_pricing,omitempty"`
 	CreatedAt                  time.Time           `json:"created_at,omitempty"`
 	UpdatedAt                  time.Time           `json:"updated_at,omitempty"`
+	OfficialPriceMultiplier    *float64            `json:"official_price_multiplier,omitempty"`
 }
 
 // ChannelTimePricing 渠道模型定价的分时倍率配置。

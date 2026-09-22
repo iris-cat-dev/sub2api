@@ -193,7 +193,7 @@ function normalize(items: PlatformQuotaItem[]): QuotaRow[] {
 
 function formatUsage(n: number): string {
   if (n == null || Number.isNaN(n)) return '-'
-  return n.toFixed(2)
+  return `¥${n.toFixed(2)}`
 }
 
 async function load() {

@@ -402,12 +402,13 @@ describe('PaymentView recharge rate preview', () => {
     wrapper.getComponent(AmountInput).vm.$emit('update:modelValue', 10)
     await flushPromises()
 
+    expect(wrapper.getComponent(AmountInput).props('currency')).toBe('USD')
     expect(translate).toHaveBeenCalledWith('payment.rechargeRatePreview', {
       currency: 'USD',
       usd: '0.50',
     })
-    expect(en.payment.rechargeRatePreview).toBe('Current rate: 1 {currency} = {usd} USD')
-    expect(zh.payment.rechargeRatePreview).toBe('当前倍率：1 {currency} = {usd} USD')
+    expect(en.payment.rechargeRatePreview).toBe('Current rate: 1 {currency} = ¥{usd} CNY balance')
+    expect(zh.payment.rechargeRatePreview).toBe('当前倍率：1 {currency} = ¥{usd} CNY 平台余额')
   })
 })
 

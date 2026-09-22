@@ -784,6 +784,7 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 			"/api/users",
 			"/models",
 			"/v1/models",
+			"/v2/models",
 			"/v1beta/chat",
 			"/backend-api/codex/responses",
 			"/backend-api/codex/responses/compact",

@@ -15,6 +15,7 @@ import type {
   UpdateGroupRequest,
   PaginatedResponse
 } from '@/types'
+import type { ChannelModelPricing } from './channels'
 
 export interface LiveCapability {
   supported: boolean
@@ -220,11 +221,28 @@ export async function update(id: number, updates: UpdateGroupRequest): Promise<A
   return data
 }
 
-/**
- * Delete group
- * @param id - Group ID
- * @returns Success confirmation
- */
+/** Save or append one group model-pricing entry. */
+export async function saveModelPricingEntry(
+  id: number,
+  index: number,
+  pricing: ChannelModelPricing
+): Promise<AdminGroup> {
+  const { data } = await apiClient.put<AdminGroup>(
+    `/admin/groups/${id}/model-pricing/${index}`,
+    { pricing }
+  )
+  return data
+}
+
+/** Delete one group model-pricing entry. */
+export async function deleteModelPricingEntry(id: number, index: number): Promise<AdminGroup> {
+  const { data } = await apiClient.delete<AdminGroup>(
+    `/admin/groups/${id}/model-pricing/${index}`
+  )
+  return data
+}
+
+/** Delete a group. */
 export async function deleteGroup(id: number): Promise<{ message: string }> {
   const { data } = await apiClient.delete<{ message: string }>(`/admin/groups/${id}`)
   return data
@@ -481,6 +499,8 @@ export const groupsAPI = {
   create,
   duplicate,
   update,
+  saveModelPricingEntry,
+  deleteModelPricingEntry,
   delete: deleteGroup,
   toggleStatus,
   getStats,

@@ -54,6 +54,7 @@ vi.mock('@/api/payment', () => ({
 import PaymentResultView from '../PaymentResultView.vue'
 import { PAYMENT_RECOVERY_STORAGE_KEY } from '@/components/payment/paymentFlow'
 import { formatPaymentAmount } from '@/components/payment/currency'
+import { formatCurrency } from '@/utils/format'
 
 const orderFactory = (status: string) => ({
   id: 42,
@@ -484,7 +485,7 @@ describe('PaymentResultView', () => {
     expect(wrapper.text()).toContain('payment.result.success')
   })
 
-  it('uses the currency returned by the order API when rendering amounts', async () => {
+  it('uses order currency for payment and platform CNY for internal amount', async () => {
     routeState.query = {
       resume_token: 'resume-hkd',
     }
@@ -492,6 +493,7 @@ describe('PaymentResultView', () => {
       data: {
         ...orderFactory('PAID'),
         currency: 'HKD',
+        order_type: 'subscription',
         amount: 100,
         pay_amount: 103,
         fee_rate: 3,
@@ -509,6 +511,7 @@ describe('PaymentResultView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain(formatPaymentAmount(103, 'HKD'))
+    expect(wrapper.text()).toContain(formatCurrency(100))
   })
 
   it('normalizes aliased payment methods before rendering the label', async () => {

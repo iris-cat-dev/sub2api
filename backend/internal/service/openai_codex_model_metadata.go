@@ -365,6 +365,19 @@ func intersectUpstreamModelMetadata(modelID string, candidates []UpstreamModelMe
 			result.MaxContextWindow = maxContextWindow
 		}
 	}
+	outputKnown := true
+	for i, candidate := range candidates {
+		if candidate.MaxOutputTokens <= 0 {
+			outputKnown = false
+			break
+		}
+		if i == 0 || candidate.MaxOutputTokens < result.MaxOutputTokens {
+			result.MaxOutputTokens = candidate.MaxOutputTokens
+		}
+	}
+	if !outputKnown {
+		result.MaxOutputTokens = 0
+	}
 	return result
 }
 

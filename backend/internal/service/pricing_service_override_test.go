@@ -68,6 +68,8 @@ func TestPricingOverride_FieldLevelMergeKeepsOtherFields(t *testing.T) {
 	require.InDelta(t, 3e-6, patched.InputCostPerToken, 1e-12)
 	require.InDelta(t, 1.5e-5, patched.OutputCostPerToken, 1e-12, "未覆盖字段保持目录值")
 	require.Equal(t, "openai", patched.LiteLLMProvider)
+	require.True(t, patched.OverrideApplied)
+	require.False(t, patched.CapabilityOverrideApplied, "仅覆盖价格不得把目录能力当作显式能力")
 	require.Equal(t, 272000, patched.LongContextInputTokenThreshold, "above 折算仍生效")
 	// 折算发生在合并之后：above 价不变、基础价被补丁改小，倍率随之变化。
 	require.InDelta(t, 5.0/3.0, patched.LongContextInputCostMultiplier, 1e-9)
@@ -121,6 +123,8 @@ func TestPricingOverride_LoadPipelineAddsNewModelAndPatchesFallbackOnly(t *testi
 	require.NotNil(t, added)
 	require.InDelta(t, 5e-6, added.InputCostPerToken, 1e-12)
 	require.InDelta(t, 1e-5, added.OutputCostPerToken, 1e-12)
+	require.True(t, added.OverrideApplied)
+	require.False(t, added.CapabilityOverrideApplied, "仅含价格的纯 override 条目不是能力兜底")
 
 	require.InDelta(t, 1e-6, svc.pricingData["remote-model"].InputCostPerToken, 1e-12)
 }
@@ -198,4 +202,31 @@ func TestPricingOverride_DisablesGPT55LadderOnDefaultCatalog(t *testing.T) {
 	pricing, err := billing.GetModelPricing("gpt-5.4")
 	require.NoError(t, err)
 	require.Equal(t, 272000, pricing.LongContextInputThreshold, "其他模型的目录阶梯不受影响")
+}
+
+func TestPricingOverride_ParsesModelCapabilities(t *testing.T) {
+	svc := newPricingServiceWithOverride(t, `{"custom-model": {
+		"max_input_tokens": 128000,
+		"max_output_tokens": 8192,
+		"supports_reasoning": true,
+		"default_reasoning_level": "medium",
+		"supported_reasoning_levels": ["low", "medium", "high", "HIGH"],
+		"supported_modalities": ["text", "image", "TEXT"]
+	}}`)
+	data, err := svc.parsePricingData([]byte(`{"custom-model": {
+		"litellm_provider": "test", "mode": "chat",
+		"input_cost_per_token": 1e-06, "output_cost_per_token": 2e-06
+	}}`))
+	require.NoError(t, err)
+
+	pricing := data["custom-model"]
+	require.NotNil(t, pricing)
+	require.True(t, pricing.CapabilityOverrideApplied)
+	require.EqualValues(t, 128_000, pricing.MaxInputTokens)
+	require.EqualValues(t, 8_192, pricing.MaxOutputTokens)
+	require.NotNil(t, pricing.SupportsReasoning)
+	require.True(t, *pricing.SupportsReasoning)
+	require.Equal(t, "medium", pricing.DefaultReasoningLevel)
+	require.Equal(t, []string{"low", "medium", "high"}, pricing.SupportedReasoningLevels)
+	require.Equal(t, []string{"text", "image"}, pricing.SupportedModalities)
 }

@@ -63,6 +63,7 @@ describe('UsageStatsCards', () => {
     expect(text).toContain('12')
     expect(text).toContain('Cache Read')
     expect(text).toContain('22')
+    expect(text).toContain('¥0.0010')
   })
 
   it('keeps the cache tooltip out of the layout while it is hidden', () => {

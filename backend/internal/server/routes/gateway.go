@@ -182,6 +182,14 @@ func RegisterGatewayRoutes(
 		}
 	}
 
+	// Enhanced model catalog for coding clients. It keeps the same API-key,
+	// group and allowlist semantics as the v1 model list while exposing
+	// conservative capability metadata.
+	v2 := r.Group("/v2")
+	v2.Use(bodyLimit, clientRequestID, opsErrorLogger, endpointNorm, gin.HandlerFunc(apiKeyAuth))
+	v2.Use(groupModelAllowlist, compositeTarget, requireGroupAnthropic)
+	v2.GET("/models", h.Gateway.ModelsV2)
+
 	// API网关（Claude API兼容）
 	gateway := r.Group("/v1")
 	gateway.Use(bodyLimit)

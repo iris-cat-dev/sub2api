@@ -342,6 +342,8 @@ func registerGroupRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		groups.GET("/:id", h.Admin.Group.GetByID)
 		groups.POST("", h.Admin.Group.Create)
 		groups.POST("/:id/duplicate", h.Admin.Group.Duplicate)
+		groups.PUT("/:id/model-pricing/:index", h.Admin.Group.SaveModelPricingEntry)
+		groups.DELETE("/:id/model-pricing/:index", h.Admin.Group.DeleteModelPricingEntry)
 		groups.PUT("/:id", h.Admin.Group.Update)
 		groups.DELETE("/:id", h.Admin.Group.Delete)
 		groups.GET("/:id/stats", h.Admin.Group.GetStats)

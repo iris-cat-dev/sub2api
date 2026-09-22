@@ -7,6 +7,11 @@ describe('formatPaymentAmount', () => {
     expect(formatPaymentAmount(100, 'KRW', 'en-US')).not.toContain('.00')
     expect(formatPaymentAmount(100, 'HKD', 'en-US')).toContain('.00')
   })
+
+  it('preserves locale-specific payment currency display', () => {
+    expect(formatPaymentAmount(3, 'CNY', 'en-US')).toBe('CN¥3.00')
+    expect(formatPaymentAmount(3, 'USD', 'en-US')).toBe('$3.00')
+  })
 })
 
 describe('currencySymbol', () => {

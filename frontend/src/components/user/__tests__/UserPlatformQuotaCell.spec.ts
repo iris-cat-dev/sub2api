@@ -40,7 +40,7 @@ describe('UserPlatformQuotaCell', () => {
     expect(w.html()).toContain('admin.users.platformQuota.cellNotConfigured')
   })
 
-  it('已配置平台渲染 已用/限额，null 档显示 —，金额去尾零', () => {
+  it('已配置平台渲染人民币已用/限额，null 档显示 —，金额去尾零', () => {
     const w = mount(UserPlatformQuotaCell, {
       props: {
         quotas: [
@@ -52,9 +52,9 @@ describe('UserPlatformQuotaCell', () => {
     })
     const html = w.html()
     expect(html).toContain('anthropic')
-    expect(html).toContain('30/100')
-    expect(html).toContain('0/—')
-    expect(html).toContain('90.5/2000')
+    expect(html).toContain('¥30/¥100')
+    expect(html).toContain('¥0/—')
+    expect(html).toContain('¥90.5/¥2000')
   })
 
   it('多平台按 anthropic→openai→gemini→antigravity 顺序，仅展示有限额的', () => {

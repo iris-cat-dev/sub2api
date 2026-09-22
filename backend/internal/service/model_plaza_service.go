@@ -88,8 +88,12 @@ func NewModelPlazaService(
 
 // ListGroups 返回模型广场数据：每个活跃分组附带其可用模型与定价。
 //
-// 模型枚举口径与 ListAvailable 一致（Active 渠道、SupportedModels ∪ 全局定价回落、
-// 平台隔离），仅把顶层从渠道换成分组：
+// 模型枚举合并分组价卡与 ListAvailable 的渠道模型（Active 渠道、
+// SupportedModels ∪ 全局定价回落、平台隔离），仅把顶层从渠道换成分组：
+//   - 分组价卡中的具体模型即使未在渠道定价中出现，也会进入广场；通配符只用于
+//     覆盖渠道枚举出的具体模型，不作为模型名直接展示；
+//   - 分组价卡优先于渠道定价，与真实计费解析链保持一致；
+//   - 复合分组价卡按模型名识别 Claude/GPT 等具体平台，避免全部落在 composite。
 //   - 渠道按 lower(name) 排序后遍历，保证同名模型去重结果确定；
 //   - 同分组同名模型「先见者胜」，仅当已存条目无定价而新条目有定价时升级替换；
 //   - token 模型的单价与阶梯按实收口径合成（见 ResolveContextPricingSchedule），
@@ -185,6 +189,70 @@ func (s *ModelPlazaService) ListGroups(ctx context.Context) ([]PlazaGroup, error
 					Name:     m.Name,
 					Platform: m.Platform,
 					Pricing:  m.Pricing,
+				})
+			}
+		}
+	}
+
+	// 分组价卡是计费解析链中的最高优先级。渠道先负责枚举其支持的具体模型，
+	// 再用分组价卡覆盖同名模型；分组中额外配置的具体模型也应直接进入广场。
+	// 通配符定价不能代表一个可调用的具体模型，因此只通过后续计费解析作用于
+	// 渠道已经枚举出的模型，不把 "*" 模式本身展示给用户。
+	for i := range groups {
+		g := &groups[i]
+		pg := byGroup[g.ID]
+		idx := modelIdx[g.ID]
+		if idx == nil {
+			idx = make(map[modelKey]int)
+			modelIdx[g.ID] = idx
+		}
+		for j := range g.ModelPricing {
+			pricing := &g.ModelPricing[j]
+			platform := strings.TrimSpace(pricing.Platform)
+			if platform == "" {
+				platform = g.Platform
+			}
+			if g.Platform == PlatformComposite {
+				if platform != PlatformComposite && !isConcreteRequestPlatform(platform) {
+					continue
+				}
+			} else if platform != g.Platform {
+				continue
+			}
+			for _, rawModel := range pricing.Models {
+				model := strings.TrimSpace(rawModel)
+				if model == "" || strings.Contains(model, "*") {
+					continue
+				}
+				cloned := pricing.Clone()
+				if platform == PlatformComposite {
+					// 复合分组价卡不区分请求平台，与真实计费解析语义一致：
+					// 覆盖所有已枚举的同名渠道模型；若渠道未枚举该模型，
+					// 则按模型名识别具体平台后加入广场（识别不出才保留 composite）。
+					overridden := false
+					for k := range pg.Models {
+						if pg.Models[k].Name == model {
+							pg.Models[k].Pricing = &cloned
+							overridden = true
+						}
+					}
+					if overridden {
+						continue
+					}
+					if detected, ok := DetectModelPlatform(model); ok {
+						platform = detected
+					}
+				}
+				key := modelKey{platform: platform, name: model}
+				if at, seen := idx[key]; seen {
+					pg.Models[at].Pricing = &cloned
+					continue
+				}
+				idx[key] = len(pg.Models)
+				pg.Models = append(pg.Models, PlazaModel{
+					Name:     model,
+					Platform: platform,
+					Pricing:  &cloned,
 				})
 			}
 		}
