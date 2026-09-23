@@ -31,6 +31,8 @@ const (
 	FieldBalance = "balance"
 	// FieldFrozenBalance holds the string denoting the frozen_balance field in the database.
 	FieldFrozenBalance = "frozen_balance"
+	// FieldDiscountMultiplier holds the string denoting the discount_multiplier field in the database.
+	FieldDiscountMultiplier = "discount_multiplier"
 	// FieldConcurrency holds the string denoting the concurrency field in the database.
 	FieldConcurrency = "concurrency"
 	// FieldStatus holds the string denoting the status field in the database.
@@ -204,6 +206,7 @@ var Columns = []string{
 	FieldRole,
 	FieldBalance,
 	FieldFrozenBalance,
+	FieldDiscountMultiplier,
 	FieldConcurrency,
 	FieldStatus,
 	FieldUsername,
@@ -265,6 +268,8 @@ var (
 	DefaultBalance float64
 	// DefaultFrozenBalance holds the default value on creation for the "frozen_balance" field.
 	DefaultFrozenBalance float64
+	// DefaultDiscountMultiplier holds the default value on creation for the "discount_multiplier" field.
+	DefaultDiscountMultiplier float64
 	// DefaultConcurrency holds the default value on creation for the "concurrency" field.
 	DefaultConcurrency int
 	// DefaultStatus holds the default value on creation for the "status" field.
@@ -343,6 +348,11 @@ func ByBalance(opts ...sql.OrderTermOption) OrderOption {
 // ByFrozenBalance orders the results by the frozen_balance field.
 func ByFrozenBalance(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldFrozenBalance, opts...).ToFunc()
+}
+
+// ByDiscountMultiplier orders the results by the discount_multiplier field.
+func ByDiscountMultiplier(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDiscountMultiplier, opts...).ToFunc()
 }
 
 // ByConcurrency orders the results by the concurrency field.

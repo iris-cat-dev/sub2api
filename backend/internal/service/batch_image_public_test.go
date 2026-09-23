@@ -115,22 +115,23 @@ func TestBatchImagePublicService_Submit(t *testing.T) {
 		}}
 		userRate := 0.5
 		svc.UserGroupRateRepo = &publicBatchImageUserGroupRateRepo{rates: map[int64]*float64{groupID: &userRate}}
+		svc.UserRepo = &publicBatchImageUserRepo{user: &User{ID: 11, DiscountMultiplier: 0.8}}
 
 		got, err := svc.Submit(ctx, BatchImageOwner{UserID: 11, APIKeyID: 22, GroupID: &groupID}, validBatchImageSubmitRequest(), "")
 		require.NoError(t, err)
-		require.InDelta(t, 0.25, got.EstimatedCost, 1e-12)
+		require.InDelta(t, 0.2, got.EstimatedCost, 1e-12)
 
 		job := repo.jobs[got.ID]
 		require.InDelta(t, 0.25, job.BaseUnitPrice, 1e-12)
-		require.InDelta(t, 0.5, job.GroupRateMultiplier, 1e-12)
+		require.InDelta(t, 0.4, job.GroupRateMultiplier, 1e-12)
 		require.InDelta(t, 1.25, job.AccountRateMultiplier, 1e-12)
 		require.InDelta(t, 0.8, job.BatchDiscountMultiplier, 1e-12)
 		// 配置的 hold(0.6) < discount(0.8) 属于会导致结算死锁的脏数据，
 		// 快照时被钳制为 discount，保证 holdAmount >= 实际成本上限。
 		require.InDelta(t, 0.8, job.HoldMultiplier, 1e-12)
-		require.InDelta(t, 0.125, job.BillableUnitPrice, 1e-12)
-		require.InDelta(t, 0.125, job.HoldUnitPrice, 1e-12)
-		require.InDelta(t, 0.25, *job.HoldAmount, 1e-12)
+		require.InDelta(t, 0.1, job.BillableUnitPrice, 1e-12)
+		require.InDelta(t, 0.1, job.HoldUnitPrice, 1e-12)
+		require.InDelta(t, 0.2, *job.HoldAmount, 1e-12)
 	})
 
 	t.Run("uses configured group 1k image price for batch image base price", func(t *testing.T) {
@@ -992,6 +993,18 @@ func (r *publicBatchImageUserGroupRateRepo) GetByUserAndGroup(_ context.Context,
 		return r.rates[groupID], nil
 	}
 	return nil, nil
+}
+
+type publicBatchImageUserRepo struct {
+	UserRepository
+	user *User
+}
+
+func (r *publicBatchImageUserRepo) GetByID(_ context.Context, id int64) (*User, error) {
+	if r != nil && r.user != nil && r.user.ID == id {
+		return r.user, nil
+	}
+	return nil, ErrUserNotFound
 }
 
 var _ BatchImageGroupPricingRepository = (*publicBatchImageGroupRepo)(nil)

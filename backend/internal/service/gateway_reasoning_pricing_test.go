@@ -35,7 +35,7 @@ func TestRecordUsage_ReasoningPricingUsesForwardedEffort(t *testing.T) {
 				},
 			}
 			account := &Account{ID: 30, Platform: platform, Type: AccountTypeAPIKey}
-			user := &User{ID: 20}
+			user := &User{ID: 20, DiscountMultiplier: 0.8}
 			if platform == PlatformAnthropic {
 				svc := newGatewayRecordUsageServiceForTest(usageRepo, userRepo, subRepo)
 				svc.resolver = NewModelPricingResolver(nil, svc.billingService)
@@ -61,10 +61,10 @@ func TestRecordUsage_ReasoningPricingUsesForwardedEffort(t *testing.T) {
 			}
 			require.NotNil(t, usageRepo.lastLog)
 			require.InDelta(t, 0.3, usageRepo.lastLog.TotalCost, 1e-12)
-			require.InDelta(t, 0.15, usageRepo.lastLog.ActualCost, 1e-12)
+			require.InDelta(t, 0.12, usageRepo.lastLog.ActualCost, 1e-12)
 			require.Equal(t, forwarded, *usageRepo.lastLog.ReasoningEffort)
 			require.Equal(t, requested, *usageRepo.lastLog.RequestedReasoningEffort)
-			require.InDelta(t, 0.15, userRepo.lastAmount, 1e-12)
+			require.InDelta(t, 0.12, userRepo.lastAmount, 1e-12)
 		})
 	}
 }

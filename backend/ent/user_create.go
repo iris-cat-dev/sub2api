@@ -130,6 +130,20 @@ func (_c *UserCreate) SetNillableFrozenBalance(v *float64) *UserCreate {
 	return _c
 }
 
+// SetDiscountMultiplier sets the "discount_multiplier" field.
+func (_c *UserCreate) SetDiscountMultiplier(v float64) *UserCreate {
+	_c.mutation.SetDiscountMultiplier(v)
+	return _c
+}
+
+// SetNillableDiscountMultiplier sets the "discount_multiplier" field if the given value is not nil.
+func (_c *UserCreate) SetNillableDiscountMultiplier(v *float64) *UserCreate {
+	if v != nil {
+		_c.SetDiscountMultiplier(*v)
+	}
+	return _c
+}
+
 // SetConcurrency sets the "concurrency" field.
 func (_c *UserCreate) SetConcurrency(v int) *UserCreate {
 	_c.mutation.SetConcurrency(v)
@@ -626,6 +640,10 @@ func (_c *UserCreate) defaults() error {
 		v := user.DefaultFrozenBalance
 		_c.mutation.SetFrozenBalance(v)
 	}
+	if _, ok := _c.mutation.DiscountMultiplier(); !ok {
+		v := user.DefaultDiscountMultiplier
+		_c.mutation.SetDiscountMultiplier(v)
+	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		v := user.DefaultConcurrency
 		_c.mutation.SetConcurrency(v)
@@ -714,6 +732,9 @@ func (_c *UserCreate) check() error {
 	}
 	if _, ok := _c.mutation.FrozenBalance(); !ok {
 		return &ValidationError{Name: "frozen_balance", err: errors.New(`ent: missing required field "User.frozen_balance"`)}
+	}
+	if _, ok := _c.mutation.DiscountMultiplier(); !ok {
+		return &ValidationError{Name: "discount_multiplier", err: errors.New(`ent: missing required field "User.discount_multiplier"`)}
 	}
 	if _, ok := _c.mutation.Concurrency(); !ok {
 		return &ValidationError{Name: "concurrency", err: errors.New(`ent: missing required field "User.concurrency"`)}
@@ -824,6 +845,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.FrozenBalance(); ok {
 		_spec.SetField(user.FieldFrozenBalance, field.TypeFloat64, value)
 		_node.FrozenBalance = value
+	}
+	if value, ok := _c.mutation.DiscountMultiplier(); ok {
+		_spec.SetField(user.FieldDiscountMultiplier, field.TypeFloat64, value)
+		_node.DiscountMultiplier = value
 	}
 	if value, ok := _c.mutation.Concurrency(); ok {
 		_spec.SetField(user.FieldConcurrency, field.TypeInt, value)
@@ -1259,6 +1284,24 @@ func (u *UserUpsert) AddFrozenBalance(v float64) *UserUpsert {
 	return u
 }
 
+// SetDiscountMultiplier sets the "discount_multiplier" field.
+func (u *UserUpsert) SetDiscountMultiplier(v float64) *UserUpsert {
+	u.Set(user.FieldDiscountMultiplier, v)
+	return u
+}
+
+// UpdateDiscountMultiplier sets the "discount_multiplier" field to the value that was provided on create.
+func (u *UserUpsert) UpdateDiscountMultiplier() *UserUpsert {
+	u.SetExcluded(user.FieldDiscountMultiplier)
+	return u
+}
+
+// AddDiscountMultiplier adds v to the "discount_multiplier" field.
+func (u *UserUpsert) AddDiscountMultiplier(v float64) *UserUpsert {
+	u.Add(user.FieldDiscountMultiplier, v)
+	return u
+}
+
 // SetConcurrency sets the "concurrency" field.
 func (u *UserUpsert) SetConcurrency(v int) *UserUpsert {
 	u.Set(user.FieldConcurrency, v)
@@ -1678,6 +1721,27 @@ func (u *UserUpsertOne) AddFrozenBalance(v float64) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateFrozenBalance() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateFrozenBalance()
+	})
+}
+
+// SetDiscountMultiplier sets the "discount_multiplier" field.
+func (u *UserUpsertOne) SetDiscountMultiplier(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDiscountMultiplier(v)
+	})
+}
+
+// AddDiscountMultiplier adds v to the "discount_multiplier" field.
+func (u *UserUpsertOne) AddDiscountMultiplier(v float64) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.AddDiscountMultiplier(v)
+	})
+}
+
+// UpdateDiscountMultiplier sets the "discount_multiplier" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateDiscountMultiplier() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDiscountMultiplier()
 	})
 }
 
@@ -2309,6 +2373,27 @@ func (u *UserUpsertBulk) AddFrozenBalance(v float64) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateFrozenBalance() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateFrozenBalance()
+	})
+}
+
+// SetDiscountMultiplier sets the "discount_multiplier" field.
+func (u *UserUpsertBulk) SetDiscountMultiplier(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetDiscountMultiplier(v)
+	})
+}
+
+// AddDiscountMultiplier adds v to the "discount_multiplier" field.
+func (u *UserUpsertBulk) AddDiscountMultiplier(v float64) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.AddDiscountMultiplier(v)
+	})
+}
+
+// UpdateDiscountMultiplier sets the "discount_multiplier" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateDiscountMultiplier() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateDiscountMultiplier()
 	})
 }
 

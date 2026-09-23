@@ -504,6 +504,7 @@ export default {
       passwordCopied: '密码已复制',
       creating: '创建中...',
       updating: '更新中...',
+      discountMultiplierRange: '全渠道折扣倍率必须大于 0 且不超过 1',
       columns: {
         user: '用户',
         id: 'ID',
@@ -520,6 +521,7 @@ export default {
         usageOpenAI: '用量 (OpenAI)',
         usageGemini: '用量 (Gemini)',
         usageAntigravity: '用量 (Antigravity)',
+        discountMultiplier: '全渠道折扣',
         concurrency: '并发数',
         status: '状态',
         lastActive: '最后活跃时间',
@@ -589,6 +591,8 @@ export default {
         concurrencyPlaceholder: '0 表示不限制',
         concurrencyHint: '该用户的最大并发请求数，0 = 不限制',
         rpmLimitPlaceholder: '0 表示不限制',
+        discountMultiplier: '全渠道折扣倍率',
+        discountMultiplierHint: '应用于该用户所有渠道的最终实付价格；1 = 原价，0.8 = 八折，0.5 = 五折',
         rpmLimitHint: '该用户每分钟最大请求数，0 = 不限制；仅在所用分组未设置 rpm_limit 时作为兜底生效'
       },
       adjustBalance: '调整余额',

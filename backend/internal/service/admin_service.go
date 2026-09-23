@@ -168,6 +168,7 @@ type CreateUserInput struct {
 	Balance              *float64
 	Concurrency          int
 	RPMLimit             int
+	DiscountMultiplier   *float64
 	AllowedGroups        []int64
 	RestrictPublicGroups bool
 	// ActorAdminID 执行本次操作的管理员ID(来自JWT)，仅用于权限敏感操作的审计日志。
@@ -175,16 +176,17 @@ type CreateUserInput struct {
 }
 
 type UpdateUserInput struct {
-	Email         string
-	Password      string
-	Username      *string
-	Notes         *string
-	Role          string   // 空字符串表示"未提供"(不修改);合法值 admin/user
-	Balance       *float64 // 使用指针区分"未提供"和"设置为0"
-	Concurrency   *int     // 使用指针区分"未提供"和"设置为0"
-	RPMLimit      *int     // 使用指针区分"未提供"和"设置为0"
-	Status        string
-	AllowedGroups *[]int64 // 使用指针区分"未提供"和"设置为空数组"
+	Email              string
+	Password           string
+	Username           *string
+	Notes              *string
+	Role               string   // 空字符串表示"未提供"(不修改);合法值 admin/user
+	Balance            *float64 // 使用指针区分"未提供"和"设置为0"
+	Concurrency        *int     // 使用指针区分"未提供"和"设置为0"
+	RPMLimit           *int     // 使用指针区分"未提供"和"设置为0"
+	DiscountMultiplier *float64 // 全渠道最终折扣倍率；nil 表示不修改，合法范围 (0, 1]
+	Status             string
+	AllowedGroups      *[]int64 // 使用指针区分"未提供"和"设置为空数组"
 	// RestrictPublicGroups 指针区分"未提供"和"显式开关"。
 	RestrictPublicGroups *bool
 	// GroupRates 用户专属分组倍率配置

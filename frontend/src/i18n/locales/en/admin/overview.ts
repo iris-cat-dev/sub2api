@@ -504,6 +504,7 @@ export default {
       passwordCopied: 'Password copied',
       creating: 'Creating...',
       updating: 'Updating...',
+      discountMultiplierRange: 'The global discount multiplier must be greater than 0 and at most 1',
       form: {
         emailLabel: 'Email',
         emailPlaceholder: 'Enter email',
@@ -524,7 +525,9 @@ export default {
         concurrencyPlaceholder: '0 = unlimited',
         concurrencyHint: 'Max concurrent requests for this user; 0 = unlimited.',
         rpmLimitPlaceholder: '0 = unlimited',
-        rpmLimitHint: 'Max requests per minute for this user; 0 = unlimited. Acts as a fallback only when the group has no rpm_limit set.'
+        rpmLimitHint: 'Max requests per minute for this user; 0 = unlimited. Acts as a fallback only when the group has no rpm_limit set.',
+        discountMultiplier: 'Global discount multiplier',
+        discountMultiplierHint: 'Final customer-wide price multiplier across every channel; 1 = full price, 0.8 = 20% off, 0.5 = half price.'
       },
       columns: {
         user: 'User',
@@ -542,6 +545,7 @@ export default {
         usageOpenAI: 'Usage (OpenAI)',
         usageGemini: 'Usage (Gemini)',
         usageAntigravity: 'Usage (Antigravity)',
+        discountMultiplier: 'Global Discount',
         concurrency: 'Concurrency',
         status: 'Status',
         lastActive: 'Last Active',

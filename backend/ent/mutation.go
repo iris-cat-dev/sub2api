@@ -48710,6 +48710,8 @@ type UserMutation struct {
 	addbalance                    *float64
 	frozen_balance                *float64
 	addfrozen_balance             *float64
+	discount_multiplier           *float64
+	adddiscount_multiplier        *float64
 	concurrency                   *int
 	addconcurrency                *int
 	status                        *string
@@ -49213,6 +49215,62 @@ func (m *UserMutation) AddedFrozenBalance() (r float64, exists bool) {
 func (m *UserMutation) ResetFrozenBalance() {
 	m.frozen_balance = nil
 	m.addfrozen_balance = nil
+}
+
+// SetDiscountMultiplier sets the "discount_multiplier" field.
+func (m *UserMutation) SetDiscountMultiplier(f float64) {
+	m.discount_multiplier = &f
+	m.adddiscount_multiplier = nil
+}
+
+// DiscountMultiplier returns the value of the "discount_multiplier" field in the mutation.
+func (m *UserMutation) DiscountMultiplier() (r float64, exists bool) {
+	v := m.discount_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDiscountMultiplier returns the old "discount_multiplier" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldDiscountMultiplier(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDiscountMultiplier is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDiscountMultiplier requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDiscountMultiplier: %w", err)
+	}
+	return oldValue.DiscountMultiplier, nil
+}
+
+// AddDiscountMultiplier adds f to the "discount_multiplier" field.
+func (m *UserMutation) AddDiscountMultiplier(f float64) {
+	if m.adddiscount_multiplier != nil {
+		*m.adddiscount_multiplier += f
+	} else {
+		m.adddiscount_multiplier = &f
+	}
+}
+
+// AddedDiscountMultiplier returns the value that was added to the "discount_multiplier" field in this mutation.
+func (m *UserMutation) AddedDiscountMultiplier() (r float64, exists bool) {
+	v := m.adddiscount_multiplier
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetDiscountMultiplier resets all changes to the "discount_multiplier" field.
+func (m *UserMutation) ResetDiscountMultiplier() {
+	m.discount_multiplier = nil
+	m.adddiscount_multiplier = nil
 }
 
 // SetConcurrency sets the "concurrency" field.
@@ -50709,7 +50767,7 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 26)
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -50733,6 +50791,9 @@ func (m *UserMutation) Fields() []string {
 	}
 	if m.frozen_balance != nil {
 		fields = append(fields, user.FieldFrozenBalance)
+	}
+	if m.discount_multiplier != nil {
+		fields = append(fields, user.FieldDiscountMultiplier)
 	}
 	if m.concurrency != nil {
 		fields = append(fields, user.FieldConcurrency)
@@ -50809,6 +50870,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 		return m.Balance()
 	case user.FieldFrozenBalance:
 		return m.FrozenBalance()
+	case user.FieldDiscountMultiplier:
+		return m.DiscountMultiplier()
 	case user.FieldConcurrency:
 		return m.Concurrency()
 	case user.FieldStatus:
@@ -50868,6 +50931,8 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldBalance(ctx)
 	case user.FieldFrozenBalance:
 		return m.OldFrozenBalance(ctx)
+	case user.FieldDiscountMultiplier:
+		return m.OldDiscountMultiplier(ctx)
 	case user.FieldConcurrency:
 		return m.OldConcurrency(ctx)
 	case user.FieldStatus:
@@ -50966,6 +51031,13 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetFrozenBalance(v)
+		return nil
+	case user.FieldDiscountMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDiscountMultiplier(v)
 		return nil
 	case user.FieldConcurrency:
 		v, ok := value.(int)
@@ -51100,6 +51172,9 @@ func (m *UserMutation) AddedFields() []string {
 	if m.addfrozen_balance != nil {
 		fields = append(fields, user.FieldFrozenBalance)
 	}
+	if m.adddiscount_multiplier != nil {
+		fields = append(fields, user.FieldDiscountMultiplier)
+	}
 	if m.addconcurrency != nil {
 		fields = append(fields, user.FieldConcurrency)
 	}
@@ -51124,6 +51199,8 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedBalance()
 	case user.FieldFrozenBalance:
 		return m.AddedFrozenBalance()
+	case user.FieldDiscountMultiplier:
+		return m.AddedDiscountMultiplier()
 	case user.FieldConcurrency:
 		return m.AddedConcurrency()
 	case user.FieldBalanceNotifyThreshold:
@@ -51154,6 +51231,13 @@ func (m *UserMutation) AddField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddFrozenBalance(v)
+		return nil
+	case user.FieldDiscountMultiplier:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddDiscountMultiplier(v)
 		return nil
 	case user.FieldConcurrency:
 		v, ok := value.(int)
@@ -51272,6 +51356,9 @@ func (m *UserMutation) ResetField(name string) error {
 		return nil
 	case user.FieldFrozenBalance:
 		m.ResetFrozenBalance()
+		return nil
+	case user.FieldDiscountMultiplier:
+		m.ResetDiscountMultiplier()
 		return nil
 	case user.FieldConcurrency:
 		m.ResetConcurrency()

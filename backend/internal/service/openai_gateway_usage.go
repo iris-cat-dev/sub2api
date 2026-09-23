@@ -210,6 +210,11 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 	pricingAt := openAIUsagePricingAt(input)
 	multiplier, imageMultiplier := computePeakAwareMultipliers(apiKey, baseMultiplier, pricingAt)
 	videoMultiplier := resolveVideoRateMultiplier(apiKey, baseMultiplier)
+	discountMultiplier := user.EffectiveDiscountMultiplier()
+	baseMultiplier *= discountMultiplier
+	multiplier *= discountMultiplier
+	imageMultiplier *= discountMultiplier
+	videoMultiplier *= discountMultiplier
 
 	var cost *CostBreakdown
 	billingModel := forwardResultBillingModel(result.Model, result.UpstreamModel)

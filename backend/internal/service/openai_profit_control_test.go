@@ -87,6 +87,17 @@ func TestResolveOpenAIProfitControlGate(t *testing.T) {
 		require.Equal(t, groupID, gate.groupID)
 	})
 
+	t.Run("threshold includes global user discount", func(t *testing.T) {
+		group := profitControlTestGroup(groupID, 0.3, 0.05)
+		group.RateMultiplier = 2.0
+		ctx := context.WithValue(profitControlTestCtx(group), ctxkey.UserDiscountMultiplier, 0.8)
+
+		gate := svc.resolveOpenAIProfitControlGate(ctx, &groupID)
+
+		require.NotNil(t, gate)
+		require.InDelta(t, 2.0*0.8*(1-0.35), gate.threshold, 1e-12)
+	})
+
 	t.Run("threshold applies peak factor exactly like billing", func(t *testing.T) {
 		group := profitControlTestGroup(groupID, 0.5, 0)
 		group.SubscriptionType = SubscriptionTypeSubscription

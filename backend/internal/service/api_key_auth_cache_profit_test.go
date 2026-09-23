@@ -23,10 +23,11 @@ func profitAuthTestAPIKey() *APIKey {
 		Name:    "profit-auth-roundtrip",
 		Status:  StatusActive,
 		User: &User{
-			ID:          40,
-			Email:       "profit@test.local",
-			Status:      StatusActive,
-			Concurrency: 5,
+			ID:                 40,
+			Email:              "profit@test.local",
+			Status:             StatusActive,
+			Concurrency:        5,
+			DiscountMultiplier: 0.8,
 		},
 		Group: &Group{
 			ID:                   groupID,
@@ -70,6 +71,7 @@ func TestAPIKeyAuthSnapshotProfitControlRoundtrip(t *testing.T) {
 	require.InDelta(t, 0.2, materialized.Group.ProfitMinMargin, 1e-12)
 	require.InDelta(t, 0.05, materialized.Group.ProfitSafetyBuffer, 1e-12)
 	require.InDelta(t, 0.06, materialized.Group.RateMultiplier, 1e-12)
+	require.InDelta(t, 0.8, materialized.User.DiscountMultiplier, 1e-12)
 
 	// 中间件语义：materialized.Group 进请求 ctx → 门必须按快照配置装上。
 	ctx := context.WithValue(context.Background(), ctxkey.Group, materialized.Group)

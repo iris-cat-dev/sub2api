@@ -76,6 +76,18 @@ func TestGatewayProfitControlInstallsForFivePlatformsOnlyOnTokenRequests(t *test
 	}
 }
 
+func TestGatewayProfitControlAppliesUserDiscountToThreshold(t *testing.T) {
+	group := gatewayProfitTestGroup(102, PlatformAnthropic)
+	ctx := context.WithValue(gatewayProfitTestContext(group), ctxkey.UserDiscountMultiplier, 0.8)
+	svc := &GatewayService{}
+
+	ctx = svc.withGatewayProfitControlGate(ctx, &group.ID)
+	gate, _ := ctx.Value(openAIProfitControlGateCtxKey{}).(*openAIProfitControlGate)
+
+	require.NotNil(t, gate)
+	require.InDelta(t, 0.4, gate.threshold, 1e-12)
+}
+
 func TestGatewayProfitControlCompositeBillingUsesScheduledMemberConfig(t *testing.T) {
 	billingGroup := &Group{
 		ID:               201,

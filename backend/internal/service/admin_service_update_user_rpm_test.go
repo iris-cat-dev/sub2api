@@ -67,3 +67,33 @@ func TestAdminService_UpdateUser_NoInvalidateWhenRPMLimitUnchanged(t *testing.T)
 	require.NoError(t, err)
 	require.Empty(t, invalidator.userIDs, "只改 username 不应触发认证缓存失效")
 }
+
+func TestAdminService_UpdateUser_DiscountInvalidatesAuthCache(t *testing.T) {
+	base := &userRepoStub{user: &User{ID: 42, Email: "u@example.com", DiscountMultiplier: 1}}
+	repo := &rpmUserRepoStub{userRepoStub: base}
+	invalidator := &authCacheInvalidatorStub{}
+	svc := &adminServiceImpl{
+		userRepo:             repo,
+		redeemCodeRepo:       &redeemRepoStub{},
+		authCacheInvalidator: invalidator,
+	}
+
+	discount := 0.8
+	updated, err := svc.UpdateUser(context.Background(), 42, &UpdateUserInput{DiscountMultiplier: &discount})
+
+	require.NoError(t, err)
+	require.InDelta(t, 0.8, updated.DiscountMultiplier, 1e-12)
+	require.Equal(t, []int64{42}, invalidator.userIDs)
+}
+
+func TestAdminService_UpdateUser_RejectsInvalidDiscount(t *testing.T) {
+	base := &userRepoStub{user: &User{ID: 42, Email: "u@example.com", DiscountMultiplier: 1}}
+	repo := &rpmUserRepoStub{userRepoStub: base}
+	svc := &adminServiceImpl{userRepo: repo}
+
+	for _, discount := range []float64{0, -0.1, 1.01} {
+		_, err := svc.UpdateUser(context.Background(), 42, &UpdateUserInput{DiscountMultiplier: &discount})
+		require.Error(t, err)
+	}
+	require.Nil(t, repo.lastUpdated)
+}

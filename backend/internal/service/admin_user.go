@@ -131,16 +131,24 @@ func (s *adminServiceImpl) CreateUser(ctx context.Context, input *CreateUserInpu
 		return nil, err
 	}
 
+	discountMultiplier := 1.0
+	if input.DiscountMultiplier != nil {
+		if *input.DiscountMultiplier <= 0 || *input.DiscountMultiplier > 1 {
+			return nil, errors.New("discount_multiplier must be greater than 0 and at most 1")
+		}
+		discountMultiplier = *input.DiscountMultiplier
+	}
 	user := &User{
-		Email:         input.Email,
-		Username:      input.Username,
-		Notes:         input.Notes,
-		Role:          role,
-		Balance:       balance,
-		Concurrency:   input.Concurrency,
-		RPMLimit:      input.RPMLimit,
-		Status:        StatusActive,
-		AllowedGroups: input.AllowedGroups,
+		Email:              input.Email,
+		Username:           input.Username,
+		Notes:              input.Notes,
+		Role:               role,
+		Balance:            balance,
+		DiscountMultiplier: discountMultiplier,
+		Concurrency:        input.Concurrency,
+		RPMLimit:           input.RPMLimit,
+		Status:             StatusActive,
+		AllowedGroups:      input.AllowedGroups,
 
 		RestrictPublicGroups: input.RestrictPublicGroups,
 	}
@@ -203,6 +211,9 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 			}
 		}
 	}
+	if input.DiscountMultiplier != nil && (*input.DiscountMultiplier <= 0 || *input.DiscountMultiplier > 1) {
+		return nil, errors.New("discount_multiplier must be greater than 0 and at most 1")
+	}
 
 	user, err := s.userRepo.GetByID(ctx, id)
 	if err != nil {
@@ -218,6 +229,7 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 	oldStatus := user.Status
 	oldRole := user.Role
 	oldRPMLimit := user.RPMLimit
+	oldDiscountMultiplier := user.EffectiveDiscountMultiplier()
 	oldAllowedGroups := append([]int64(nil), user.AllowedGroups...)
 
 	// fields 与下面的 input.X 判空条件一一对应：管理员没提交的列不写回，
@@ -275,6 +287,10 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 		user.RPMLimit = *input.RPMLimit
 		fields.RPMLimit = true
 	}
+	if input.DiscountMultiplier != nil {
+		user.DiscountMultiplier = *input.DiscountMultiplier
+		fields.DiscountMultiplier = true
+	}
 
 	if input.AllowedGroups != nil {
 		user.AllowedGroups = *input.AllowedGroups
@@ -305,9 +321,9 @@ func (s *adminServiceImpl) UpdateUser(ctx context.Context, id int64, input *Upda
 	}
 
 	if s.authCacheInvalidator != nil {
-		// RPMLimit 直接参与 billing_cache_service.checkRPM 的三级级联，
-		// allowed_groups 参与 API Key 专属分组授权判断；不失效缓存会让修改在一个 L2 TTL 内失去效果。
-		if user.Concurrency != oldConcurrency || user.Status != oldStatus || user.Role != oldRole || user.RPMLimit != oldRPMLimit || user.RestrictPublicGroups != oldRestrictPublicGroups || !sameInt64Set(user.AllowedGroups, oldAllowedGroups) {
+		// DiscountMultiplier participates directly in billing and must invalidate
+		// every API-key auth snapshot for the user before subsequent requests.
+		if user.Concurrency != oldConcurrency || user.Status != oldStatus || user.Role != oldRole || user.RPMLimit != oldRPMLimit || user.EffectiveDiscountMultiplier() != oldDiscountMultiplier || user.RestrictPublicGroups != oldRestrictPublicGroups || !sameInt64Set(user.AllowedGroups, oldAllowedGroups) {
 			s.authCacheInvalidator.InvalidateAuthCacheByUserID(ctx, user.ID)
 		}
 	}

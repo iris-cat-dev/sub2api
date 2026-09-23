@@ -147,6 +147,7 @@ func (r *userRepository) create(ctx context.Context, userIn *service.User, guard
 		SetPasswordHash(userIn.PasswordHash).
 		SetRole(userIn.Role).
 		SetBalance(userIn.Balance).
+		SetDiscountMultiplier(userIn.EffectiveDiscountMultiplier()).
 		SetConcurrency(userIn.Concurrency).
 		SetStatus(userIn.Status).
 		SetSignupSource(userSignupSourceOrDefault(userIn.SignupSource)).
@@ -313,6 +314,9 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User, field
 	}
 	if fields.RPMLimit {
 		updateOp = updateOp.SetRpmLimit(userIn.RPMLimit)
+	}
+	if fields.DiscountMultiplier {
+		updateOp = updateOp.SetDiscountMultiplier(userIn.DiscountMultiplier)
 	}
 	if fields.Status {
 		updateOp = updateOp.SetStatus(userIn.Status)

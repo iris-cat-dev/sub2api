@@ -87,4 +87,25 @@ describe('UserEditModal concurrency', () => {
     expect(showError).toHaveBeenCalledWith('admin.users.concurrencyNonNegative')
     expect(update).not.toHaveBeenCalled()
   })
+
+  it('sends the global discount multiplier', async () => {
+    const wrapper = mountModal(3)
+
+    await wrapper.get('[data-test="discount-multiplier-input"]').setValue('0.8')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(update).toHaveBeenCalledWith(7, expect.objectContaining({ discount_multiplier: 0.8 }))
+  })
+
+  it('rejects a discount multiplier above one', async () => {
+    const wrapper = mountModal(3)
+
+    await wrapper.get('[data-test="discount-multiplier-input"]').setValue('1.1')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    expect(showError).toHaveBeenCalledWith('admin.users.discountMultiplierRange')
+    expect(update).not.toHaveBeenCalled()
+  })
 })

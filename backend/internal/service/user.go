@@ -20,9 +20,13 @@ type User struct {
 	Role           string
 	Balance        float64
 	FrozenBalance  float64
-	Concurrency    int
-	Status         string
-	AllowedGroups  []int64
+	// DiscountMultiplier is the final customer-wide discount applied after
+	// channel, group, per-user group, peak, and media-specific pricing.
+	// 1 means no discount; valid persisted values are in (0, 1].
+	DiscountMultiplier float64
+	Concurrency        int
+	Status             string
+	AllowedGroups      []int64
 	// RestrictPublicGroups narrows the public groups this user may bind to the
 	// ones listed in AllowedGroups. False keeps the default, where every public
 	// group is bindable.
@@ -66,6 +70,22 @@ type User struct {
 
 	APIKeys       []APIKey
 	Subscriptions []UserSubscription
+}
+
+// EffectiveUserDiscountMultiplier normalizes persisted and cached values for
+// billing. Invalid or absent legacy values are fail-closed to no discount.
+func EffectiveUserDiscountMultiplier(value float64) float64 {
+	if !(value > 0 && value <= 1) {
+		return 1
+	}
+	return value
+}
+
+func (u *User) EffectiveDiscountMultiplier() float64 {
+	if u == nil {
+		return 1
+	}
+	return EffectiveUserDiscountMultiplier(u.DiscountMultiplier)
 }
 
 func (u *User) IsAdmin() bool {

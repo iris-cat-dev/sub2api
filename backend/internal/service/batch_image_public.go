@@ -86,6 +86,7 @@ type BatchImagePublicService struct {
 	AccountRepo       BatchImageAccountSelectionRepository
 	GroupRepo         BatchImageGroupPricingRepository
 	UserGroupRateRepo BatchImageUserGroupRateRepository
+	UserRepo          UserRepository
 	Queue             BatchImageQueue
 	ProviderRegistry  *BatchImageProviderRegistry
 	Pricing           BatchImagePricingResolver
@@ -182,11 +183,12 @@ type BatchImageItemsQuery struct {
 	Cursor string
 }
 
-func NewBatchImagePublicService(repo BatchImageRepository, accountRepo AccountRepository, groupRepo GroupRepository, userGroupRateRepo UserGroupRateRepository, queue BatchImageQueue, pricing *BatchImageModelPricingResolver, billingRepo UsageBillingRepository, authCache APIKeyAuthCacheInvalidator, cfg *config.Config) *BatchImagePublicService {
+func NewBatchImagePublicService(repo BatchImageRepository, accountRepo AccountRepository, groupRepo GroupRepository, userRepo UserRepository, userGroupRateRepo UserGroupRateRepository, queue BatchImageQueue, pricing *BatchImageModelPricingResolver, billingRepo UsageBillingRepository, authCache APIKeyAuthCacheInvalidator, cfg *config.Config) *BatchImagePublicService {
 	return &BatchImagePublicService{
 		Repo:              repo,
 		AccountRepo:       accountRepo,
 		GroupRepo:         groupRepo,
+		UserRepo:          userRepo,
 		UserGroupRateRepo: userGroupRateRepo,
 		Queue:             queue,
 		ProviderRegistry:  NewBatchImageProviderRegistryFromConfig(cfg),
@@ -1044,6 +1046,13 @@ func (s *BatchImagePublicService) resolvePricingSnapshot(ctx context.Context, ow
 		if configuredUnit := group.GetImagePrice(req.ImageSize); configuredUnit != nil && *configuredUnit >= 0 {
 			unit = *configuredUnit
 		}
+	}
+	if s.UserRepo != nil {
+		user, userErr := s.UserRepo.GetByID(ctx, owner.UserID)
+		if userErr != nil || user == nil {
+			return nil, ErrBatchImageSettlementPricingMissing
+		}
+		groupMultiplier *= user.EffectiveDiscountMultiplier()
 	}
 	if unit < 0 {
 		if s.Pricing == nil {

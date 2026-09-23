@@ -755,6 +755,9 @@ func (s *GatewayService) recordUsageCore(ctx context.Context, input *recordUsage
 		pricingAt = timezone.Now()
 	}
 	multiplier, imageMultiplier := computePeakAwareMultipliers(apiKey, multiplier, pricingAt)
+	discountMultiplier := user.EffectiveDiscountMultiplier()
+	multiplier *= discountMultiplier
+	imageMultiplier *= discountMultiplier
 
 	// 确定计费模型
 	concreteBillingModel := forwardResultBillingModel(result.Model, result.UpstreamModel)
