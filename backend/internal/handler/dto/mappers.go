@@ -20,6 +20,7 @@ func UserFromServiceShallow(u *service.User) *User {
 		Role:                       u.Role,
 		Balance:                    u.Balance,
 		FrozenBalance:              u.FrozenBalance,
+		DiscountMultiplier:         u.EffectiveDiscountMultiplier(),
 		Concurrency:                u.Concurrency,
 		Status:                     u.Status,
 		AllowedGroups:              u.AllowedGroups,
@@ -72,7 +73,6 @@ func UserFromServiceAdmin(u *service.User) *AdminUser {
 		User:                 *base,
 		Notes:                u.Notes,
 		LastUsedAt:           u.LastUsedAt,
-		DiscountMultiplier:   u.EffectiveDiscountMultiplier(),
 		GroupRates:           u.GroupRates,
 		RestrictPublicGroups: u.RestrictPublicGroups,
 	}

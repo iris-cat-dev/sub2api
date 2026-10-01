@@ -87,6 +87,8 @@ export interface User {
   role: 'admin' | 'user' // User role for authorization
   balance: number // User balance for API usage
   frozen_balance?: number // Balance currently held by async batch jobs
+  // 全渠道最终折扣倍率，1 = 不打折。
+  discount_multiplier: number
   concurrency: number // Allowed concurrent requests
   rpm_limit?: number // User-level RPM cap (0 = unlimited); effective as fallback when group has no rpm_limit
   status: 'active' | 'disabled' // Account status
@@ -105,8 +107,6 @@ export interface AdminUser extends User {
   // 管理员备注（普通用户接口不返回）
   notes: string
   last_used_at?: string | null
-  // 全渠道最终折扣倍率，1 = 不打折。
-  discount_multiplier: number
   // 用户专属分组倍率配置 (group_id -> rate_multiplier)
   group_rates?: Record<number, number>
   // 为 true 时该用户仅可使用 allowed_groups 中列出的公开分组。

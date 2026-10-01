@@ -18,3 +18,11 @@ func TestUserFromServiceShallow_MapsDeletedAt(t *testing.T) {
 	active := UserFromServiceShallow(&service.User{ID: 2, Email: "a@test.com"})
 	require.Nil(t, active.DeletedAt, "active user must have nil DeletedAt")
 }
+
+func TestUserFromServiceShallow_ExposesEffectiveDiscountMultiplier(t *testing.T) {
+	discounted := UserFromServiceShallow(&service.User{ID: 1, DiscountMultiplier: 0.8})
+	require.InDelta(t, 0.8, discounted.DiscountMultiplier, 1e-12)
+
+	legacy := UserFromServiceShallow(&service.User{ID: 2})
+	require.InDelta(t, 1.0, legacy.DiscountMultiplier, 1e-12)
+}

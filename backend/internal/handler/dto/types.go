@@ -10,19 +10,20 @@ import (
 )
 
 type User struct {
-	ID            int64      `json:"id"`
-	Email         string     `json:"email"`
-	Username      string     `json:"username"`
-	Role          string     `json:"role"`
-	Balance       float64    `json:"balance"`
-	FrozenBalance float64    `json:"frozen_balance"`
-	Concurrency   int        `json:"concurrency"`
-	Status        string     `json:"status"`
-	AllowedGroups []int64    `json:"allowed_groups"`
-	LastActiveAt  *time.Time `json:"last_active_at,omitempty"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-	DeletedAt     *time.Time `json:"deleted_at,omitempty"`
+	ID                 int64      `json:"id"`
+	Email              string     `json:"email"`
+	Username           string     `json:"username"`
+	Role               string     `json:"role"`
+	Balance            float64    `json:"balance"`
+	FrozenBalance      float64    `json:"frozen_balance"`
+	DiscountMultiplier float64    `json:"discount_multiplier"`
+	Concurrency        int        `json:"concurrency"`
+	Status             string     `json:"status"`
+	AllowedGroups      []int64    `json:"allowed_groups"`
+	LastActiveAt       *time.Time `json:"last_active_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	DeletedAt          *time.Time `json:"deleted_at,omitempty"`
 
 	// 余额不足通知
 	BalanceNotifyEnabled       bool               `json:"balance_notify_enabled"`
@@ -43,9 +44,8 @@ type User struct {
 type AdminUser struct {
 	User
 
-	Notes              string     `json:"notes"`
-	LastUsedAt         *time.Time `json:"last_used_at"`
-	DiscountMultiplier float64    `json:"discount_multiplier"`
+	Notes      string     `json:"notes"`
+	LastUsedAt *time.Time `json:"last_used_at"`
 	// GroupRates 用户专属分组倍率配置
 	// map[groupID]rateMultiplier
 	GroupRates map[int64]float64 `json:"group_rates,omitempty"`
