@@ -15,6 +15,8 @@
     "long_context_input_cost_multiplier": 2.0,
     "long_context_output_cost_multiplier": 1.5,
     "litellm_provider": "openai",
+    "default_reasoning_level": "low",
+    "supported_reasoning_levels": ["low", "medium", "high", "xhigh"],
     "max_input_tokens": 922000,
     "max_output_tokens": 128000,
     "max_tokens": 128000,

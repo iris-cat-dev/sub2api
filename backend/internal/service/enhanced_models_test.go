@@ -2,11 +2,35 @@ package service
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/stretchr/testify/require"
 )
+
+func TestBuildEnhancedModelsCatalogUsesBundledGPT61SolCapabilities(t *testing.T) {
+	body, err := os.ReadFile(filepath.Join("..", "..", "resources", "model-pricing", "model_prices_and_context_window.json"))
+	require.NoError(t, err)
+	pricingService := &PricingService{}
+	pricingService.pricingData, err = pricingService.parsePricingData(body)
+	require.NoError(t, err)
+	svc := &GatewayService{billingService: NewBillingService(&config.Config{}, pricingService)}
+
+	for _, platform := range []string{PlatformOpenAI, PlatformComposite} {
+		t.Run(platform, func(t *testing.T) {
+			models := svc.BuildEnhancedModelsCatalog(context.Background(),
+				&Group{ID: 906, Platform: platform}, "", []string{"gpt-6.1-sol"})
+			require.Len(t, models, 1)
+			require.Equal(t, []string{"text", "image"}, models[0].InputModalities)
+			require.NotNil(t, models[0].Reasoning)
+			require.True(t, *models[0].Reasoning)
+			require.Equal(t, "low", models[0].DefaultReasoningLevel)
+			require.Equal(t, []string{"low", "medium", "high", "xhigh"}, models[0].SupportedReasoningLevels)
+		})
+	}
+}
 
 func TestBuildEnhancedModelsCatalogUsesConservativeMetadata(t *testing.T) {
 	t.Parallel()

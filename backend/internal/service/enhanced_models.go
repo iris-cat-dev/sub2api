@@ -77,14 +77,10 @@ func (s *GatewayService) BuildEnhancedModelsCatalog(
 			DisplayName:   modelID,
 			SupportedAPIs: s.enhancedModelSupportedAPIs(ctx, group, effectivePlatform, modelID),
 		}
-		if metadata, ok := groupCodexModelMetadata(
-			effectivePlatform,
-			modelID,
-			accounts,
-			group,
-			compositeRoutes,
-			compositeRoutesAvailable,
-		); ok {
+		metadata, hasMetadata := groupCodexModelMetadata(
+			effectivePlatform, modelID, accounts, group, compositeRoutes, compositeRoutesAvailable,
+		)
+		if hasMetadata {
 			if name := strings.TrimSpace(metadata.DisplayName); name != "" {
 				model.DisplayName = name
 			}
@@ -95,21 +91,35 @@ func (s *GatewayService) BuildEnhancedModelsCatalog(
 			model.DefaultReasoningLevel = metadata.DefaultReasoningLevel
 			model.SupportedReasoningLevels = append([]string(nil), metadata.SupportedReasoningLevels...)
 		}
-		s.applyEnhancedModelPricingOverrideFallback(&model)
+		s.applyEnhancedModelPricingOverrideFallback(&model, effectivePlatform, metadata)
 		models = append(models, model)
 	}
 	return models
 }
 
-func (s *GatewayService) applyEnhancedModelPricingOverrideFallback(model *EnhancedModel) {
+func (s *GatewayService) applyEnhancedModelPricingOverrideFallback(model *EnhancedModel, platform string, metadata codexModelMetadataOverride) {
 	if model == nil || s == nil || s.billingService == nil || s.billingService.pricingService == nil {
 		return
 	}
-	pricing := s.billingService.pricingService.GetIdentifiedModelPricing(model.ID)
-	if pricing == nil || !pricing.CapabilityOverrideApplied {
+	pricingService := s.billingService.pricingService
+	pricing := pricingService.GetIdentifiedModelPricing(model.ID)
+	if pricing == nil {
 		return
 	}
-	if len(model.InputModalities) == 0 {
+	if !pricing.CapabilityOverrideApplied {
+		// A catalog entry can describe a known upstream model, not an arbitrary
+		// public alias. Composite groups may expose the same exact OpenAI model;
+		// only use complete, exact OpenAI capability declarations.
+		pricingService.mu.RLock()
+		exact := pricingService.pricingData[model.ID] == pricing
+		pricingService.mu.RUnlock()
+		if (platform != PlatformOpenAI && platform != PlatformComposite) ||
+			pricing.LiteLLMProvider != "openai" || !exact || pricing.SupportsReasoning == nil ||
+			len(pricing.SupportedModalities) == 0 || len(pricing.SupportedReasoningLevels) == 0 {
+			return
+		}
+	}
+	if len(model.InputModalities) == 0 && !metadata.inputModalitiesConflict {
 		model.InputModalities = append([]string(nil), pricing.SupportedModalities...)
 	}
 	if model.ContextWindow <= 0 {
@@ -118,14 +128,16 @@ func (s *GatewayService) applyEnhancedModelPricingOverrideFallback(model *Enhanc
 	if model.MaxOutputTokens <= 0 {
 		model.MaxOutputTokens = pricing.MaxOutputTokens
 	}
-	if model.Reasoning == nil {
-		model.Reasoning = cloneBool(pricing.SupportsReasoning)
-	}
-	if model.DefaultReasoningLevel == "" {
-		model.DefaultReasoningLevel = pricing.DefaultReasoningLevel
-	}
-	if len(model.SupportedReasoningLevels) == 0 {
-		model.SupportedReasoningLevels = append([]string(nil), pricing.SupportedReasoningLevels...)
+	if !metadata.reasoningConflict {
+		if model.Reasoning == nil {
+			model.Reasoning = cloneBool(pricing.SupportsReasoning)
+		}
+		if model.DefaultReasoningLevel == "" {
+			model.DefaultReasoningLevel = pricing.DefaultReasoningLevel
+		}
+		if len(model.SupportedReasoningLevels) == 0 {
+			model.SupportedReasoningLevels = append([]string(nil), pricing.SupportedReasoningLevels...)
+		}
 	}
 }
 

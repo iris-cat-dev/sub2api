@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/claude"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -88,6 +90,60 @@ func newGatewayModelsHandlerForTest(repo service.AccountRepository) *GatewayHand
 			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 		),
+	}
+}
+
+func TestGatewayModelsV2ReportsBundledGPT61SolCapabilities(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const groupID int64 = 180
+	cfg := &config.Config{}
+	cfg.Pricing.DataDir = t.TempDir()
+	cfg.Pricing.FallbackFile = filepath.Join("..", "..", "resources", "model-pricing", "model_prices_and_context_window.json")
+	pricing := service.NewPricingService(cfg, nil)
+	require.NoError(t, pricing.Initialize())
+	defer pricing.Stop()
+
+	repo := &gatewayModelsAccountRepoStub{byGroup: map[int64][]service.Account{
+		groupID: {{
+			ID: 1, Platform: service.PlatformOpenAI, Status: service.StatusActive, Schedulable: true,
+			Credentials: map[string]any{"model_mapping": map[string]any{"gpt-6.1-sol": "gpt-6.1-sol"}},
+		}},
+	}}
+	h := newGatewayModelsHandlerForTest(repo)
+	h.gatewayService = service.NewGatewayService(repo,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		service.NewBillingService(cfg, pricing),
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+	for _, platform := range []string{service.PlatformOpenAI, service.PlatformComposite} {
+		t.Run(platform, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodGet, "/v2/models", nil)
+			c.Set(string(middleware2.ContextKeyAPIKey), &service.APIKey{
+				Group: &service.Group{ID: groupID, Platform: platform},
+			})
+			h.ModelsV2(c)
+
+			require.Equal(t, http.StatusOK, rec.Code)
+			var got struct {
+				Data []service.EnhancedModel `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+			var sol *service.EnhancedModel
+			for i := range got.Data {
+				if got.Data[i].ID == "gpt-6.1-sol" {
+					sol = &got.Data[i]
+					break
+				}
+			}
+			require.NotNil(t, sol)
+			require.Equal(t, []string{"text", "image"}, sol.InputModalities)
+			require.NotNil(t, sol.Reasoning)
+			require.True(t, *sol.Reasoning)
+			require.Equal(t, "low", sol.DefaultReasoningLevel)
+			require.Equal(t, []string{"low", "medium", "high", "xhigh"}, sol.SupportedReasoningLevels)
+		})
 	}
 }
 

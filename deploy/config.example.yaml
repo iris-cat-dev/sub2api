@@ -1103,6 +1103,12 @@ pricing:
   # 字段值为 null 表示删除该字段。模型名须与目录键完全一致。
   # 修改后在下一次哈希检查时按内容哈希自动重载，无需重启。
   # override_file: "./data/model_pricing_overrides.json"
+  # /v2/models uses complete, exact OpenAI catalog capability declarations
+  # (supports_reasoning, supported_reasoning_levels, supported_modalities)
+  # for OpenAI and composite groups only to fill missing fields; known account
+  # metadata takes precedence.
+  # /v2/models 对 OpenAI 和复合分组可用精确模型名的完整目录能力声明补足缺失字段；
+  # 已知账号元数据优先，未命中目录精确键的别名不会据此推断。
   # Update interval in hours
   # 更新间隔（小时）
   update_interval_hours: 24
