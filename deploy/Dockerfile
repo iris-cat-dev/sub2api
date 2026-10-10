@@ -5,7 +5,7 @@
 # Stage 2: Final minimal image
 # =============================================================================
 
-ARG GOLANG_IMAGE=golang:1.27.0-alpine
+ARG GOLANG_IMAGE=golang:1.27.2-alpine
 ARG ALPINE_IMAGE=alpine:3.20
 ARG GOPROXY=https://goproxy.cn,direct
 ARG GOSUMDB=sum.golang.google.cn
